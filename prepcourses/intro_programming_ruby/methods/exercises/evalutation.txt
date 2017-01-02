@@ -1,0 +1,19 @@
+1. x = 2
+
+2. puts x = 2
+
+3. p name = "Joe"
+
+4. four = "four"
+
+5. print something = "nothing"
+
+Answer: 
+
+1. Evaluates to 2
+
+2. Evaluates to nil. X returns the 2 value, and puts prints it. But puts returns a nil value.
+
+3. Evalutates to "four"
+
+4. Evaluates nil as well.

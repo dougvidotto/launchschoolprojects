@@ -1,0 +1,6 @@
+names = ['bob', 'joe', 'susan', 'margaret']
+names['margaret'] = 'jody'
+
+Answer: You can't use a String between [] to make a reference of an array position. To correct the program you can do one of the following: 
+.names[names.index('margaret')] = 'jody' 
+.names[3] = 'jody'

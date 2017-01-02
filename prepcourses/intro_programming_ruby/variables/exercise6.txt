@@ -1,0 +1,1 @@
+The message tells me that a variable or a method was called using an inexistent variable or method, or that variable or method was not available in that scope.

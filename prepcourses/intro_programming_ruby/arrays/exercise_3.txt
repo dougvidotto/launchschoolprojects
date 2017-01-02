@@ -1,0 +1,9 @@
+arr = [["test", "hello", "world"],["example", "mem"]]
+
+To print the word example you can use puts arr[1].first, or arr.last.first, or you can create do the following loop:
+
+arr.each do |item|
+  if(item == 'example')
+    puts item
+  end
+end

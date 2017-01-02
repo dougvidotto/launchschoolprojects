@@ -1,0 +1,1 @@
+Arrays are a set os values separeted by commas. Hash are key/value sets, meaning that each value inside the set are linked to a key.

@@ -1,0 +1,2 @@
+The first program prints 3 at the end because x has scope inside the 'times', since it was declared outside of it.
+Now, the second program, we will receive an error because the x scope is just inside 'times' block code.

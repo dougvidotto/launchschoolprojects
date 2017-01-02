@@ -1,0 +1,1 @@
+Exception handling is a procedure you do when something goes wrong like when you try to read a file and this file is corrupt. With you can make the program to continue to execute, even if these errors occur.
