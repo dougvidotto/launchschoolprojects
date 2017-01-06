@@ -1,3 +1,5 @@
+require 'pry'
+
 def prompt(message)
   puts "=> #{message}"
 end
@@ -6,16 +8,24 @@ def valid_name?(name)
   !name.empty?
 end
 
+def number?(number)
+  number.to_f.to_s == number || number.to_i.to_s == number
+end
+
 def positive_float?(value)
-  value.to_f.to_s == value && value.to_f > 0
+  number?(value) && value.to_f > 0
 end
 
 def positive_integer?(value)
-  value.to_i.to_s == value && value.to_i > 0
+  number?(value) && value.to_i > 0
 end
 
-def positive_number?(amount)
-  positive_float?(amount) ||  positive_integer?(amount)
+def positive_number?(value)
+  positive_float?(value) || positive_integer?(value)
+end
+
+def apr_is_not_negative?(apr)
+  number?(apr) && apr.to_i >= 0
 end
 
 def valid_duration?(duration)
@@ -25,6 +35,24 @@ end
 
 def valid_answer?(answer)
   %w(y n).include?(answer.downcase)
+end
+
+def no_apr_mortgage(loan, duration)
+  loan.to_f / duration.to_i
+end
+
+def positive_apr_mortgage(loan, apr, duration)
+  monthy_interest_rate = (apr.to_f / 100) / 12
+  loan.to_f * (monthy_interest_rate /
+    (1 - (1 + monthy_interest_rate)**-duration.to_i))
+end
+
+def calculate_mortgage_rate(loan, apr, duration)
+  if apr.to_i.zero?
+    no_apr_mortgage(loan, duration)
+  else
+    positive_apr_mortgage(loan, apr, duration)
+  end
 end
 
 prompt("Welcome to mortgage calculator!")
@@ -56,7 +84,7 @@ loop do
   loop do
     prompt("#{name}, please insert the APR amount (only numbers) :")
     annual_percentage_rate = gets.chomp.strip
-    if positive_number?(annual_percentage_rate)
+    if apr_is_not_negative?(annual_percentage_rate)
       break
     else
       prompt("Invalid value for annual_percentage_rate. Please try again")
@@ -75,9 +103,9 @@ loop do
     end
   end
 
-  monthy_interest_rate = (annual_percentage_rate.to_f / 100) / 12
-  mortage = loan.to_f * (monthy_interest_rate /
-            (1 - (1 + monthy_interest_rate)**-loan_duration_in_months.to_i))
+  mortage = calculate_mortgage_rate(loan,
+                                    annual_percentage_rate,
+                                    loan_duration_in_months)
 
   prompt("The mortage rate will be: U$ #{format('%.2f', mortage)} per month")
 
