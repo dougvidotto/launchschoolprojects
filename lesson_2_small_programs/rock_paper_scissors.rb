@@ -17,7 +17,7 @@ def won?(player1, player2)
   WINNING_TABLE.fetch(player1).include?(player2)
 end
 
-def display_current_result(player_victories, computer_victories)
+def display_score(player_victories, computer_victories)
   prompt("Player: #{player_victories}. Computer: #{computer_victories}")
 end
 
@@ -53,11 +53,8 @@ loop do
     loop do
       prompt("Choose: (r)rock, (p)paper, (sc)scissors, (l)lizard, (sp)spock")
       choice = Kernel.gets().chomp()
-      if VALID_CHOICES.key?(choice.downcase)
-        break
-      else
-        prompt("That's not a valid choice.")
-      end
+      break if VALID_CHOICES.key?(choice.downcase)
+      prompt("That's not a valid choice.")
     end
 
     computer_choice = VALID_CHOICES.values.sample
@@ -70,7 +67,7 @@ loop do
     end
 
     display_results(choice, computer_choice)
-    display_current_result(player_victories, computer_victories)
+    display_score(player_victories, computer_victories)
   end
 
   display_final_results(player_victories)
@@ -85,6 +82,7 @@ loop do
     end
   end
   break if %w(n).include?(answer.downcase)
+  system 'cls' if !system 'clear'
 end
 
 prompt("Thanks for playing rock, paper, scissors, lizard and spock!")
