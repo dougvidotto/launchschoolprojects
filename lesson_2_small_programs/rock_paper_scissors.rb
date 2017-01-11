@@ -82,7 +82,7 @@ loop do
     end
   end
   break if %w(n).include?(answer.downcase)
-  system 'cls' if !system 'clear'
+  system 'cls' unless system 'clear'
 end
 
 prompt("Thanks for playing rock, paper, scissors, lizard and spock!")
