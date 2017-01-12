@@ -1,0 +1,33 @@
+Describe the difference between ! and ? in Ruby. And explain what would happen in the following scenarios:
+
+what is != and where should you use it?
+put ! before something, like !user_name
+put ! after something, like words.uniq!
+put ? before something
+put ? after something
+put !! before something, like !!user_name
+
+
+
+Answer:
+'!' is used, as a common pattern, at the end of methods, indicating the caller is being modified.
+Also, '!' is used to change a boolean value from true to false or false to true.
+
+. what is != and where should you use it?
+=> This symbol means different. Usually is used when comparing values in a if clause
+
+.put ! before something, like !user_name
+=> Alter the boolean equivalent value of user_name. If is nil, the equivalent is false, then changes to true
+  If is not nil, then equivalent is true, and '!' changes to false.
+
+.put ! after something, like words.uniq!
+=> Used in methods like 'words', it's a pattern meaning the caller, word, is being modified
+
+.put ? before something
+=> In this case is the beggining of a ternary operator.
+
+.put ? after something
+=> After a method, it's a pattern indicating that method returns true or false
+
+.put !! before something, like !!user_name
+=> It returns the boolean equivalent of that variable.

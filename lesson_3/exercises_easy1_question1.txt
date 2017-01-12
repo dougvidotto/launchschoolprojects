@@ -1,0 +1,9 @@
+What would you expect the code below to print out?
+
+numbers = [1, 2, 2, 3]
+numbers.uniq
+
+puts numbers
+
+Answer: I would expect to print [1, 2, 2, 3], since uniq doesn't change the content of the array
+To change the content, it should had used numbers.uniq!
