@@ -62,12 +62,33 @@ def joinor(squares, separator=', ', connector='or ')
   end
 end
 
-def risking_to_lose?(brd)
+def computer_pre_victory?(brd, line)
+  brd.values_at(*line).count(COMPUTER_MARKER) == 2 &&
+  brd.values_at(*line).count(INITIAL_MARKER) == 1
+end
+
+def player_pre_victory?(brd, line)
+  brd.values_at(*line).count(PLAYER_MARKER) == 2 &&
+  brd.values_at(*line).count(INITIAL_MARKER) == 1
+end
+
+def computer_winning_line(brd)
   WINNING_LINES.each do |line|
-    if brd.values_at(*line).count(PLAYER_MARKER) == 2 &&
-       brd.values_at(*line).count(INITIAL_MARKER) == 1
-      return true
-    end
+    return line if computer_pre_victory?(brd, line)
+  end
+  nil
+end
+
+def computer_about_to_win?(brd)
+  WINNING_LINES.each do |line|
+    return true if computer_pre_victory?(brd, line)
+  end
+  false
+end
+
+def computer_about_to_lose?(brd)
+  WINNING_LINES.each do |line|
+    return true if player_pre_victory?(brd, line)
   end
   false
 end
@@ -84,26 +105,32 @@ def player_places_piece!(brd)
   brd[square] = PLAYER_MARKER
 end
 
-def line_risking_to_lose(brd)
+def line_to_imped_player_victory(brd)
   WINNING_LINES.each do |line|
-    if brd.values_at(*line).count(PLAYER_MARKER) == 2 &&
-       brd.values_at(*line).count(INITIAL_MARKER) == 1
-      return line
-    end
+    return line if player_pre_victory?(brd, line)
   end
   nil
 end
 
+def get_computer_square_piece(brd, line)
+  square = nil
+  line.each do |position|
+    if brd[position].casecmp(INITIAL_MARKER).zero?
+      square = position
+      break
+    end
+  end
+  square
+end
+
 def computer_places_piece!(brd)
   square = ''
-  if risking_to_lose?(brd)
-    line = line_risking_to_lose(brd)
-    line.each do |position|
-      if brd[position].casecmp(INITIAL_MARKER).zero?
-        square = position
-        break
-      end
-    end
+  if computer_about_to_win?(brd)
+    line = computer_winning_line(brd)
+    square = get_computer_square_piece(brd, line)
+  elsif computer_about_to_lose?(brd)
+    line = line_to_imped_player_victory(brd)
+    square = get_computer_square_piece(brd, line)
   else
     square = empty_squares(brd).sample
   end
