@@ -6,6 +6,7 @@ WINNING_LINES = [[1, 2, 3], [4, 5, 6], [7, 8, 9]] +
 INITIAL_MARKER = ' '
 PLAYER_MARKER = 'X'
 COMPUTER_MARKER = 'O'
+FIRST_PLAYER = ['player', 'computer']
 
 def prompt(msg)
   puts "=> #{msg}"
@@ -13,6 +14,7 @@ end
 
 # rubocop:disable Metrics/AbcSize
 def display_board(brd)
+  system 'clear'
   puts ""
   puts "     |     |"
   puts "  #{brd[1]}  |  #{brd[2]}  |  #{brd[3]}"
@@ -39,11 +41,11 @@ def empty_squares(brd)
   brd.keys.select { |num| brd[num] == INITIAL_MARKER }
 end
 
-def join_multiple(squares, separator=', ', connector='or ')
+def join_multiple(squares, separator=', ', connector='or')
   message = ''
   squares.each_with_index do |square, index|
     message += if index == squares.size - 1
-                 connector + square.to_s
+                 "#{connector} " + square.to_s
                else
                  square.to_s + separator
                end
@@ -51,12 +53,12 @@ def join_multiple(squares, separator=', ', connector='or ')
   message
 end
 
-def joinor(squares, separator=', ', connector='or ')
+def joinor(squares, separator=', ', connector='or')
   case squares.size
   when 1
     squares[0].to_s
   when 2
-    squares[0] + connector + squares[1].to_s
+    squares[0].to_s + " #{connector} " + squares[1].to_s
   else
     join_multiple(squares, separator, connector)
   end
@@ -64,12 +66,12 @@ end
 
 def computer_pre_victory?(brd, line)
   brd.values_at(*line).count(COMPUTER_MARKER) == 2 &&
-  brd.values_at(*line).count(INITIAL_MARKER) == 1
+    brd.values_at(*line).count(INITIAL_MARKER) == 1
 end
 
 def player_pre_victory?(brd, line)
   brd.values_at(*line).count(PLAYER_MARKER) == 2 &&
-  brd.values_at(*line).count(INITIAL_MARKER) == 1
+    brd.values_at(*line).count(INITIAL_MARKER) == 1
 end
 
 def computer_winning_line(brd)
@@ -93,18 +95,6 @@ def computer_about_to_lose?(brd)
   false
 end
 
-def player_places_piece!(brd)
-  square = ''
-  loop do
-    prompt "Choose a square for a piece: (#{joinor(empty_squares(brd))}): "
-    square = gets.chomp.to_i
-    break if empty_squares(brd).include?(square)
-    prompt "This is not a valid choice! Try again."
-  end
-
-  brd[square] = PLAYER_MARKER
-end
-
 def line_to_imped_player_victory(brd)
   WINNING_LINES.each do |line|
     return line if player_pre_victory?(brd, line)
@@ -123,6 +113,18 @@ def get_computer_square_piece(brd, line)
   square
 end
 
+def player_places_piece!(brd)
+  square = ''
+  loop do
+    prompt "Choose a square for a piece: (#{joinor(empty_squares(brd))}): "
+    square = gets.chomp.to_i
+    break if empty_squares(brd).include?(square)
+    prompt "This is not a valid choice! Try again."
+  end
+
+  brd[square] = PLAYER_MARKER
+end
+
 def computer_places_piece!(brd)
   square = ''
   if computer_about_to_win?(brd)
@@ -132,9 +134,17 @@ def computer_places_piece!(brd)
     line = line_to_imped_player_victory(brd)
     square = get_computer_square_piece(brd, line)
   else
-    square = empty_squares(brd).sample
+    square = brd[5] == INITIAL_MARKER ? 5 : empty_squares(brd).sample
   end
   brd[square] = COMPUTER_MARKER
+end
+
+def place_piece!(brd, current_player)
+  if current_player == 'player'
+    player_places_piece! brd
+  else
+    computer_places_piece! brd
+  end
 end
 
 def board_full?(brd)
@@ -178,20 +188,57 @@ def exit_game?
   end
 end
 
+def alternate_player!(current_player)
+  if current_player == FIRST_PLAYER[0]
+    FIRST_PLAYER[1]
+  else
+    FIRST_PLAYER[0]
+  end
+end
+
+def define_first_player
+  go_first_choice = ''
+  loop do
+    prompt "Who should go first?: "
+    prompt "1. Player"
+    prompt "2. Computer"
+    prompt "3. random"
+    go_first_choice = gets.chomp.to_i
+    break if [1, 2, 3].include?(go_first_choice)
+    prompt "Sorry, you have to choose 1, 2 or 3"
+  end
+  if go_first_choice == 3
+    FIRST_PLAYER.sample
+  else
+    FIRST_PLAYER[go_first_choice - 1]
+  end
+end
+
+def pause_game
+  prompt "Press any key to continue..."
+  gets
+end
+
 loop do
   player_score = 0
   computer_score = 0
 
-  loop do
-    board = initialize_board
+  first_player = define_first_player
+  if first_player == FIRST_PLAYER[0]
+    prompt "Player goes first!"
+  else
+    prompt "Computer goes first"
+  end
 
+  pause_game
+
+  loop do
+    current_player = first_player
+    board = initialize_board
     loop do
       display_board board
-
-      player_places_piece! board
-      break if someone_won?(board) || board_full?(board)
-
-      computer_places_piece! board
+      place_piece! board, current_player
+      current_player = alternate_player! current_player
       break if someone_won?(board) || board_full?(board)
     end
 
@@ -205,6 +252,8 @@ loop do
     else
       prompt "It's a tie!"
     end
+
+    pause_game
 
     break if five_victories?(player_score, computer_score)
   end
