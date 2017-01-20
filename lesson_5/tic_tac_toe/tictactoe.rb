@@ -62,6 +62,16 @@ def joinor(squares, separator=', ', connector='or ')
   end
 end
 
+def risking_to_lose?(brd)
+  WINNING_LINES.each do |line|
+    if brd.values_at(*line).count(PLAYER_MARKER) == 2 &&
+       brd.values_at(*line).count(INITIAL_MARKER) == 1
+      return true
+    end
+  end
+  false
+end
+
 def player_places_piece!(brd)
   square = ''
   loop do
@@ -74,8 +84,29 @@ def player_places_piece!(brd)
   brd[square] = PLAYER_MARKER
 end
 
+def line_risking_to_lose(brd)
+  WINNING_LINES.each do |line|
+    if brd.values_at(*line).count(PLAYER_MARKER) == 2 &&
+       brd.values_at(*line).count(INITIAL_MARKER) == 1
+      return line
+    end
+  end
+  nil
+end
+
 def computer_places_piece!(brd)
-  square = empty_squares(brd).sample
+  square = ''
+  if risking_to_lose?(brd)
+    line = line_risking_to_lose(brd)
+    line.each do |position|
+      if brd[position].casecmp(INITIAL_MARKER).zero?
+        square = position
+        break
+      end
+    end
+  else
+    square = empty_squares(brd).sample
+  end
   brd[square] = COMPUTER_MARKER
 end
 
@@ -126,8 +157,10 @@ loop do
 
   loop do
     board = initialize_board
+
     loop do
       display_board board
+
       player_places_piece! board
       break if someone_won?(board) || board_full?(board)
 
@@ -145,6 +178,7 @@ loop do
     else
       prompt "It's a tie!"
     end
+
     break if five_victories?(player_score, computer_score)
   end
 
