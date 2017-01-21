@@ -1,12 +1,11 @@
-require 'pry'
 WINNING_LINES = [[1, 2, 3], [4, 5, 6], [7, 8, 9]] +
                 [[1, 4, 7], [2, 5, 8], [3, 6, 9]] +
                 [[1, 5, 9], [3, 5, 7]]
 
-INITIAL_MARKER = ' '
-PLAYER_MARKER = 'X'
-COMPUTER_MARKER = 'O'
-FIRST_PLAYER = ['player', 'computer']
+INITIAL_MARKER = ' '.freeze
+PLAYER_MARKER = 'X'.freeze
+COMPUTER_MARKER = 'O'.freeze
+FIRST_PLAYER = ['player', 'computer'].freeze
 
 def prompt(msg)
   puts "=> #{msg}"
@@ -56,9 +55,9 @@ end
 def joinor(squares, separator=', ', connector='or')
   case squares.size
   when 1
-    squares[0].to_s
+    squares.first.to_s
   when 2
-    squares[0].to_s + " #{connector} " + squares[1].to_s
+    squares.first.to_s + " #{connector} " + squares[1].to_s
   else
     join_multiple(squares, separator, connector)
   end
@@ -95,7 +94,7 @@ def computer_about_to_lose?(brd)
   false
 end
 
-def line_to_imped_player_victory(brd)
+def line_to_impede_player_victory(brd)
   WINNING_LINES.each do |line|
     return line if player_pre_victory?(brd, line)
   end
@@ -131,7 +130,7 @@ def computer_places_piece!(brd)
     line = computer_winning_line(brd)
     square = get_computer_square_piece(brd, line)
   elsif computer_about_to_lose?(brd)
-    line = line_to_imped_player_victory(brd)
+    line = line_to_impede_player_victory(brd)
     square = get_computer_square_piece(brd, line)
   else
     square = brd[5] == INITIAL_MARKER ? 5 : empty_squares(brd).sample
@@ -175,17 +174,13 @@ def exit_game?
   loop do
     prompt "Play again? (y or n)"
     answer = gets.chomp
-    if !'w%(y n)'.include?(answer.downcase)
-      prompt "Insert y to play again or n to exit"
-    else
+    if %w(y n).include?(answer.downcase)
       break
+    else
+      prompt "Insert y to play again or n to exit"
     end
   end
-  if answer.casecmp('n').zero?
-    return true
-  else
-    return false
-  end
+  !answer.casecmp('y').zero?
 end
 
 def alternate_player!(current_player)
