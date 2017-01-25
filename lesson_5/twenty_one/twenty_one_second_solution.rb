@@ -1,5 +1,6 @@
 SUITS = ['H', 'D', 'S', 'C'].freeze
-VALUES = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'].freeze
+VALUES = ['2', '3', '4', '5', '6', '7',
+          '8', '9', '10', 'J', 'Q', 'K', 'A'].freeze
 MAX_TOTAL_VALUE = 21
 MAX_DEALER_HITS = 17
 
@@ -38,7 +39,6 @@ def busted?(cards)
   total(cards) > MAX_TOTAL_VALUE
 end
 
-# :tie, :dealer, :player, :dealer_busted, :player_busted
 def detect_result(dealer_cards, player_cards)
   player_total = total(player_cards)
   dealer_total = total(dealer_cards)
@@ -71,14 +71,19 @@ def display_result(result)
   end
 end
 
+def display_initial_situation(player_cards, dealer_cards)
+  player_total = total(player_cards)
+  first_card = player_cards.first
+  second_card = player_cards[1]
+  prompt "Dealer has #{dealer_cards[0]} and ?"
+  prompt "You have: #{first_card} and #{second_card}. Total: #{player_total}."
+end
+
 def deal_initial_cards(deck, player_cards, dealer_cards)
   2.times do
     player_cards << deck.pop
     dealer_cards << deck.pop
   end
-  player_total = total(player_cards)
-  prompt "Dealer has #{dealer_cards[0]} and ?"
-  prompt "You have: #{player_cards[0]} and #{player_cards[1]}, for a total of #{player_total}."
 end
 
 def choose_option
@@ -129,8 +134,13 @@ end
 def play_again?
   puts "-------------"
   prompt "Do you want to play again? (y or n)"
-  answer = gets.chomp
-  answer.downcase.start_with?('y')
+  answer = nil
+  loop do
+    answer = gets.chomp
+    break if %w(y n).include?(answer.downcase)
+    prompt "Invalid choice! Try again."
+  end
+  answer.downcase.casecmp('y').zero?
 end
 
 loop do
@@ -139,17 +149,15 @@ loop do
   dealer_score = 0
 
   loop do
-    # initialize vars
     deck = initialize_deck
     player_cards = []
     dealer_cards = []
 
     deal_initial_cards(deck, player_cards, dealer_cards)
+    display_initial_situation(player_cards, dealer_cards)
 
     player_turn(deck, player_cards)
-    if !busted?(player_cards)
-      dealer_turn(deck, dealer_cards)
-    end
+    dealer_turn(deck, dealer_cards) unless busted?(player_cards)
 
     puts "=============="
     prompt "Dealer has #{dealer_cards}, for a total of: #{total(dealer_cards)}"
@@ -166,10 +174,15 @@ loop do
     end
 
     prompt "Player #{player_score} x #{dealer_score} Dealer"
-    prompt "Press any key to continue..."
+    prompt "Press enter to continue..."
     gets
 
     break if player_score == 5 || dealer_score == 5
+  end
+  if player_score == 5
+    prompt "Congratulations! You scored 5! You won!"
+  else
+    prompt "Sorry, dealer scored 5. Dealer won."
   end
   break unless play_again?
 end
