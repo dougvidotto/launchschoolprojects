@@ -81,29 +81,35 @@ def deal_initial_cards(deck, player_cards, dealer_cards)
   prompt "You have: #{player_cards[0]} and #{player_cards[1]}, for a total of #{player_total}."
 end
 
-def player_turn(deck, player_cards)
-  player_total = 0
+def choose_option
+  player_turn = nil
   loop do
-    player_turn = nil
-    loop do
-      prompt "Would you like to (h)it or (s)tay?"
-      player_turn = gets.chomp.downcase
-      break if ['h', 's'].include?(player_turn)
-      prompt "Sorry, must enter 'h' or 's'."
-    end
+    prompt "Would you like to (h)it or (s)tay?"
+    player_turn = gets.chomp.downcase
+    break if ['h', 's'].include?(player_turn)
+    prompt "Sorry, must enter 'h' or 's'."
+  end
+  player_turn
+end
 
+def hit(deck, player_cards)
+  player_cards << deck.pop
+  player_total = total(player_cards)
+  prompt "You chose to hit!"
+  prompt "Your cards are now: #{player_cards}"
+  prompt "Your total is now: #{player_total}"
+end
+
+def player_turn(deck, player_cards)
+  loop do
+    player_turn = choose_option
     if player_turn == 'h'
-      player_cards << deck.pop
-      player_total = total(player_cards)
-      prompt "You chose to hit!"
-      prompt "Your cards are now: #{player_cards}"
-      prompt "Your total is now: #{player_total}"
+      hit(deck, player_cards)
     end
-
     break if player_turn == 's' || busted?(player_cards)
   end
   if !busted?(player_cards)
-    prompt "Player stayed at #{player_total}"
+    prompt "Player stayed at #{total(player_cards)}"
   end
 end
 
@@ -147,7 +153,7 @@ loop do
     prompt "Player has #{player_cards}, for a total of: #{total(player_cards)}"
     puts "=============="
     result = detect_result(dealer_cards, player_cards)
-    display_result(result, dealer_cards, player_cards)
+    display_result(result)
 
     case result
     when :player_busted, :dealer
