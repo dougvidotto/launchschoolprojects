@@ -145,8 +145,11 @@ loop do
     dealer_cards = []
 
     deal_initial_cards(deck, player_cards, dealer_cards)
+
     player_turn(deck, player_cards)
-    dealer_turn(deck, dealer_cards)
+    if !busted?(player_cards)
+      dealer_turn(deck, dealer_cards)
+    end
 
     puts "=============="
     prompt "Dealer has #{dealer_cards}, for a total of: #{total(dealer_cards)}"
