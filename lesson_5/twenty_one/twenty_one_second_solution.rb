@@ -3,7 +3,6 @@ VALUES = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'].free
 MAX_TOTAL_VALUE = 21
 MAX_DEALER_HITS = 17
 
-
 def prompt(msg)
   puts "=> #{msg}"
 end
@@ -57,7 +56,7 @@ def detect_result(dealer_cards, player_cards)
   end
 end
 
-def display_result(result, dealer_cards, player_cards)
+def display_result(result)
   case result
   when :player_busted
     prompt "You busted! Dealer wins!"
@@ -78,13 +77,12 @@ def deal_initial_cards(deck, player_cards, dealer_cards)
     dealer_cards << deck.pop
   end
   player_total = total(player_cards)
-  dealer_total = total(dealer_cards)
   prompt "Dealer has #{dealer_cards[0]} and ?"
   prompt "You have: #{player_cards[0]} and #{player_cards[1]}, for a total of #{player_total}."
 end
 
 def player_turn(deck, player_cards)
-	player_total = 0
+  player_total = 0
   loop do
     player_turn = nil
     loop do
@@ -104,9 +102,9 @@ def player_turn(deck, player_cards)
 
     break if player_turn == 's' || busted?(player_cards)
   end
-	if !busted?(player_cards)
-	  prompt "Player stayed at #{player_total}"
-	end
+  if !busted?(player_cards)
+    prompt "Player stayed at #{player_total}"
+  end
 end
 
 def dealer_turn(deck, dealer_cards)
@@ -130,40 +128,40 @@ def play_again?
 end
 
 loop do
-	prompt "Welcome to Twenty-One!"
-	player_score = 0
-	dealer_score = 0
-	
-	loop do
-	  # initialize vars
-	  deck = initialize_deck
-	  player_cards = []
-	  dealer_cards = []
+  prompt "Welcome to Twenty-One!"
+  player_score = 0
+  dealer_score = 0
 
-	  deal_initial_cards(deck, player_cards, dealer_cards)
-	  player_turn(deck, player_cards)
-	  dealer_turn(deck, dealer_cards)
+  loop do
+    # initialize vars
+    deck = initialize_deck
+    player_cards = []
+    dealer_cards = []
 
-	  puts "=============="
-	  prompt "Dealer has #{dealer_cards}, for a total of: #{total(dealer_cards)}"
-	  prompt "Player has #{player_cards}, for a total of: #{total(player_cards)}"
-	  puts "=============="
-	  result = detect_result(dealer_cards, player_cards)
-	  display_result(result, dealer_cards, player_cards)
+    deal_initial_cards(deck, player_cards, dealer_cards)
+    player_turn(deck, player_cards)
+    dealer_turn(deck, dealer_cards)
 
-	  case result
-  		when :player_busted, :dealer
-    		dealer_score += 1
-  		when :dealer_busted, :player
-    		player_score += 1
-  	end
+    puts "=============="
+    prompt "Dealer has #{dealer_cards}, for a total of: #{total(dealer_cards)}"
+    prompt "Player has #{player_cards}, for a total of: #{total(player_cards)}"
+    puts "=============="
+    result = detect_result(dealer_cards, player_cards)
+    display_result(result, dealer_cards, player_cards)
 
-  	prompt "Player #{player_score} x #{dealer_score} Dealer"
-  	prompt "Press any key to continue..."
-  	gets
+    case result
+    when :player_busted, :dealer
+      dealer_score += 1
+    when :dealer_busted, :player
+      player_score += 1
+    end
 
-	  break if player_score == 5 || dealer_score == 5
-	end
+    prompt "Player #{player_score} x #{dealer_score} Dealer"
+    prompt "Press any key to continue..."
+    gets
+
+    break if player_score == 5 || dealer_score == 5
+  end
   break unless play_again?
 end
 
