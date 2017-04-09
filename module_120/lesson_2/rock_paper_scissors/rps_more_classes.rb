@@ -1,22 +1,22 @@
 class Move
   def scissors?
-    self.class == Scissors.new.class
+    self.instance_of?(Scissors)
   end
 
   def rock?
-    self.class == Rock.new.class
+    self.instance_of?(Rock)
   end
 
   def paper?
-    self.class == Paper.new.class
+    self.instance_of?(Paper)
   end
 
   def lizard?
-    self.class == Lizard.new.class
+    self.instance_of?(Lizard)
   end
 
   def spock?
-    self.class == Spock.new.class
+    self.instance_of?(Spock)
   end
 end
 
@@ -27,6 +27,10 @@ class Rock <  Move
 
   def <(other_move)
     other_move.paper? || other_move.spock?
+  end
+
+  def ==(another_move)
+    another_move.instance_of?(Rock)
   end
 
   def to_s
@@ -43,6 +47,10 @@ class Paper < Move
     other_move.scissors? ||other_move.lizard?
   end
 
+  def ==(another_move)
+    another_move.instance_of?(Paper)
+  end
+
   def to_s
     "Paper"
   end
@@ -55,6 +63,10 @@ class Scissors < Move
 
   def <(other_move)
     other_move.rock? || other_move.spock?
+  end
+
+  def ==(another_move)
+    another_move.instance_of?(Scissors)
   end
 
   def to_s
@@ -71,6 +83,10 @@ class Lizard < Move
     other_move.rock? || other_move.scissors?
   end
 
+  def ==(another_move)
+    another_move.instance_of?(Lizard)
+  end
+
   def to_s
     "Lizard"
   end
@@ -83,6 +99,10 @@ class Spock < Move
 
   def <(other_move)
     other_move.lizard? || other_move.paper?
+  end
+
+  def ==(another_move)
+    another_move.instance_of?(Spock)
   end
 
   def to_s
@@ -110,7 +130,7 @@ class Human < Player
     loop do
       puts "What's your name?"
       n = gets.chomp
-      break unless n.empty?
+      break unless n.strip == ""
       puts "Sorry, must enter a value"
     end
     self.name = n
@@ -134,18 +154,137 @@ class Human < Player
 end
 
 class Computer < Player
-  def set_name
-    self.name = ['R2', 'Hal', 'Chappie', 'Sony', 'Number 5'].sample
-  end
-
-  def choose
-    self.move = AVAILABLE_MOVES[rand(5)]
+  def set_name(name)
+    self.name = name
   end
 end
 
-class Rules
-  def match(history)
+class R2D2 < Computer
+  #Only Rock baby!
+  AVAILABLE_MOVES = [Rock.new]
+  
+  def initialize
+    self.name = "R2D2"
+  end
 
+  def choose(rules)
+    self.move = rules.choose(AVAILABLE_MOVES)
+  end
+end
+
+class Hal < Computer
+  #Insertion more scissors to raise the chances of getting scissors. Hal never plays paper
+  AVAILABLE_MOVES = [Scissors.new, Scissors.new, Scissors.new, Rock.new, Lizard.new, Spock.new]
+  def initialize
+    self.name = "Hal"
+  end
+
+  def choose(rules)
+    self.move = rules.choose(AVAILABLE_MOVES)
+  end
+end
+
+#Terminators fake themselves as human, so they have the same moves as humans
+class Terminator < Computer
+  def initialize
+    self.name = "Terminator"
+  end
+
+  def choose(rules)
+    self.move = rules.choose(AVAILABLE_MOVES)
+  end
+end
+
+class Rule
+  attr_accessor :history
+
+  def initialize(history_of_movements)
+    @history = history_of_movements
+  end
+
+  def choose(available_moves)
+    available_moves.sample
+  end
+end
+
+class DefeatAvoider < Rule
+    
+  def match?(available_moves)
+    !history.computer_matches[:lose].empty?
+  end
+
+  def choose(available_moves)
+    return super(available_moves) if !match?(available_moves)
+    most_defeated_move = find_most_defeated_move
+    if most_defeated_move != nil
+      return try_to_choose_different_move(available_moves, most_defeated_move)
+    end
+    super(available_moves)
+  end
+
+  private
+
+  def try_to_choose_different_move(available_moves, most_defeated_move)
+    defeated_idx = available_moves.find_index(most_defeated_move)
+    random_idx = rand(available_moves.size)
+    if random_idx == defeated_idx
+      new_rand = rand(available_moves.size)
+      #normally it's 0.2 the chance to get the same defeated value. Now it's only 20% * 20% = 4%
+      return available_moves[new_rand] 
+    end
+    available_moves[random_idx]
+  end
+
+  def find_most_defeated_move
+    defeated_moves = history.computer_matches[:lose]
+    defeated_moves.each do |move|
+      if (defeated_moves.count(move).fdiv(defeated_moves.size)) > 0.6
+        return move
+      end
+    end
+    nil
+  end
+end
+
+class Aggressive < Rule
+  
+  def match?(available_moves)
+    history.human_matches[:win].size >= 2 &&
+    history.human_matches[:win].last == history.human_matches[:win][-2]
+  end
+
+  def choose(available_moves)
+    return super(available_moves) if !match?(available_moves)
+    human_victory_moves = history.human_matches[:win]
+    if human_victory_moves.last == human_victory_moves[-2]
+      get_stronger_than(human_victory_moves.last, available_moves)
+    end
+  end
+
+  private
+
+  def get_stronger_than(move, available_moves)
+    stronger_moves = available_moves.select do |other_move|
+      other_move > move
+    end
+    stronger_moves.size > 0 ? stronger_moves.sample : available_moves.sample
+  end
+end
+
+class RuleEngine
+  attr_accessor :all_rules
+
+  def initialize(history_of_movements)
+    @all_rules = [Aggressive.new(history_of_movements), DefeatAvoider.new(history_of_movements)]
+  end
+
+  def choose(available_moves)
+    all_rules.each do |rule|
+      if rule.match?(available_moves)
+        return rule.choose(available_moves)
+      end
+    end
+    available_moves.sample
   end
 end
 
@@ -155,8 +294,8 @@ class HistoryOfMovements
   def initialize
     @human_moves = []
     @computer_moves = []
-    @human_matches = Hash.new([])
-    @computer_matches = Hash.new([])
+    @human_matches = {win: [], lose: []}
+    @computer_matches = {win: [], lose: []}
   end
 
   def add_human_move(move)
@@ -168,19 +307,24 @@ class HistoryOfMovements
   end
 
   def add_victory_to_human(move)
-    human_matches["win"].push(move)
+    self.human_matches[:win].push(move)
   end
 
   def add_defeat_to_human(move)
-    human_matches["lose"].push(move)
+    self.human_matches[:lose].push(move)
   end
 
   def add_victory_to_computer(move)
-    computer_matches["win"].push(move)
+    self.computer_matches[:win].push(move)
   end
 
   def add_defeat_to_computer(move)
-    computer_matches["lose"].push(move)
+    self.computer_matches[:lose].push(move)
+  end
+
+  def clear_moves
+    self.human_moves.clear
+    self.computer_moves.clear
   end
 
   def show_human_moves
@@ -193,13 +337,16 @@ class HistoryOfMovements
 end
 
 class RPSGame
-  attr_accessor :human, :computer, :max_score, :history_of_movements
+  attr_accessor :human, :computer, :max_score, :history_of_movements, :rule_engine
 
   def initialize
     @human = Human.new
-    @computer = Computer.new
+    @computer = [R2D2.new, Hal.new, Terminator.new].sample
     @history_of_movements = HistoryOfMovements.new
+    @rule_engine = RuleEngine.new(history_of_movements)
   end
+
+  private
 
   def register_history
     history_of_movements.add_human_move(human.move)
@@ -216,10 +363,12 @@ class RPSGame
       puts "#{human} won!"
       human.current_score += 1
       history_of_movements.add_victory_to_human(human.move)
+      history_of_movements.add_defeat_to_computer(computer.move)
     elsif human.move < computer.move
       puts "#{computer} won!"
       computer.current_score += 1
       history_of_movements.add_victory_to_computer(computer.move)
+      history_of_movements.add_defeat_to_human(human.move)
     else
       puts "It's a tie."
     end
@@ -259,7 +408,7 @@ class RPSGame
       break if %w[y n].include? answer.downcase
       puts "Sorry, you have to choose (y/n)"
     end
-    return true if answer == 'y'
+    return true if answer.downcase == 'y'
     false
   end
 
@@ -278,6 +427,7 @@ class RPSGame
     ask_for_score
     human.current_score = 0
     computer.current_score = 0
+    history_of_movements.clear_moves
   end
 
   def play_match
@@ -285,7 +435,7 @@ class RPSGame
       system "clear"
       display_current_situation
       human.choose
-      computer.choose
+      computer.choose(rule_engine)
       register_history
       display_moves
       evaluate_the_winner
@@ -295,6 +445,7 @@ class RPSGame
     end
   end
 
+  public
   def play
     display_welcome_message
     loop do
