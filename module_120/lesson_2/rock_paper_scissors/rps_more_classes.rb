@@ -127,30 +127,36 @@ end
 
 class Human < Player
   def name
-    n = ""
+    input_name = ""
     loop do
       puts "What's your name?"
-      n = gets.chomp
-      break unless n.strip == ""
+      input_name = gets.chomp
+      break unless input_name.strip == ""
       puts "Sorry, must enter a value"
     end
-    self.name = n
+    self.name = input_name
   end
 
   def choose
     choice = nil
     loop do
-      puts "Please choose:"
-      puts "1) Rock"
-      puts "2) Paper"
-      puts "3) Scissors"
-      puts "4) Lizard"
-      puts "5) Spock"
+      display_choice_options
       choice = gets.chomp.to_i
       break if choice > 0 && !AVAILABLE_MOVES[choice - 1].nil?
       puts "Sorry, invalid choice."
     end
     self.move = AVAILABLE_MOVES[choice - 1]
+  end
+
+  private
+
+  def display_choice_options
+    puts "Please choose:"
+    puts "1) Rock"
+    puts "2) Paper"
+    puts "3) Scissors"
+    puts "4) Lizard"
+    puts "5) Spock"
   end
 end
 
@@ -171,7 +177,12 @@ end
 
 class Hal < Computer
   # Hal never plays paper. Adding more scissors to raise this move's chances
-  AVAILABLE_MOVES = [Scissors.new, Scissors.new, Scissors.new, Rock.new, Lizard.new, Spock.new]
+  AVAILABLE_MOVES = [Scissors.new,
+                     Scissors.new,
+                     Scissors.new,
+                     Rock.new,
+                     Lizard.new,
+                     Spock.new]
   def initialize
     self.name = "Hal"
   end
@@ -225,7 +236,8 @@ class DefeatAvoider < Rule
     random_idx = rand(available_moves.size)
     if random_idx == defeated_idx
       new_rand = rand(available_moves.size)
-      # Normally it's 0.2 the chance to get the same defeated value. Now it's only 20% * 20% = 4%
+      # Normally it's 0.2 the chance to get the same defeated value.
+      # Now it's only 20% * 20% = 4%
       return available_moves[new_rand]
     end
     available_moves[random_idx]
@@ -251,7 +263,7 @@ class Aggressive < Rule
   def choose(available_moves)
     return super(available_moves) if !match?
     human_victory_moves = history.human_matches[:win]
-    get_stronger_than(human_victory_moves.last, available_moves) if human_victory_moves.last == human_victory_moves[-2]
+    get_stronger_than(human_victory_moves.last, available_moves)
   end
 
   private
@@ -268,7 +280,8 @@ class RuleEngine
   attr_accessor :all_rules
 
   def initialize(history_of_movements)
-    @all_rules = [Aggressive.new(history_of_movements), DefeatAvoider.new(history_of_movements)]
+    @all_rules = [Aggressive.new(history_of_movements),
+                  DefeatAvoider.new(history_of_movements)]
   end
 
   def choose(available_moves)
@@ -330,7 +343,11 @@ class HistoryOfMovements
 end
 
 class RPSGame
-  attr_accessor :human, :computer, :max_score, :history_of_movements, :rule_engine
+  attr_accessor :human,
+                :computer,
+                :max_score,
+                :history_of_movements,
+                :rule_engine
 
   def initialize
     @human = Human.new
@@ -351,17 +368,25 @@ class RPSGame
     puts "#{computer} chose #{computer.move}."
   end
 
+  def register_human_victory
+    puts "#{human} won!"
+    human.current_score += 1
+    history_of_movements.add_victory_to_human(human.move)
+    history_of_movements.add_defeat_to_computer(computer.move)
+  end
+
+  def register_computer_victory
+    puts "#{computer} won!"
+    computer.current_score += 1
+    history_of_movements.add_victory_to_computer(computer.move)
+    history_of_movements.add_defeat_to_human(human.move)
+  end
+
   def evaluate_the_winner
     if human.move > computer.move
-      puts "#{human} won!"
-      human.current_score += 1
-      history_of_movements.add_victory_to_human(human.move)
-      history_of_movements.add_defeat_to_computer(computer.move)
+      register_human_victory
     elsif human.move < computer.move
-      puts "#{computer} won!"
-      computer.current_score += 1
-      history_of_movements.add_victory_to_computer(computer.move)
-      history_of_movements.add_defeat_to_human(human.move)
+      register_computer_victory
     else
       puts "It's a tie."
     end
@@ -369,19 +394,40 @@ class RPSGame
 
   def display_champion
     if human.current_score > computer.current_score
-      puts "#{human} achieved #{max_score} first! #{human} is the champion!"
+      puts "#{human} achieved #{max_score} first! "\
+           "#{human} is the champion!"
     else
-      puts "#{computer} achieved #{max_score} first! #{computer} is the champion!"
+      puts "#{computer} achieved #{max_score} first! "\
+           "#{computer} is the champion!"
     end
+  end
+
+  def singular_or_plural(score)
+    score == 1 ? 'victory' : 'victories'
+  end
+
+  def display_human_current_moves
+    puts "#{human} movements so far:"\
+         "#{history_of_movements.show_human_moves}"
+  end
+
+  def display_computer_current_moves
+    puts "#{computer} movements so far:"\
+         "#{history_of_movements.show_computer_moves}"
+  end
+
+  def display_score(player)
+    puts "#{player} has #{player.current_score}"\
+         " #{singular_or_plural(player.current_score)}"
   end
 
   def display_current_situation
     puts "-------- Player needs #{max_score} victories to win! ---------------"
-    puts "#{human} movements so far: #{history_of_movements.show_human_moves}"
-    puts "#{computer} movements so far: #{history_of_movements.show_computer_moves}"
+    display_human_current_moves
+    display_computer_current_moves
     puts ""
-    puts "#{human} has #{human.current_score} #{human.current_score == 1 ? 'victory' : 'victories'}"
-    puts "#{computer} has #{computer.current_score} #{computer.current_score == 1 ? 'victory' : 'victories'}"
+    display_score(human)
+    display_score(computer)
     puts "---------------------------------------------------------------"
   end
 
@@ -401,8 +447,7 @@ class RPSGame
       break if %w[y n].include? answer.downcase
       puts "Sorry, you have to choose (y/n)"
     end
-    return true if answer.downcase == 'y'
-    false
+    answer.downcase == 'y'
   end
 
   def ask_for_score
@@ -423,17 +468,25 @@ class RPSGame
     history_of_movements.clear_moves
   end
 
+  def make_choices
+    human.choose
+    computer.choose(rule_engine)
+  end
+
+  def pause_game
+    puts "Press any key to continue"
+    gets.chomp
+  end
+
   def play_match
     loop do
       system "clear"
       display_current_situation
-      human.choose
-      computer.choose(rule_engine)
+      make_choices
       register_history
       display_moves
       evaluate_the_winner
-      puts "Press any key to continue"
-      gets.chomp
+      pause_game
       break if human.current_score == max_score ||
                computer.current_score == max_score
     end
