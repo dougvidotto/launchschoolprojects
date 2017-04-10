@@ -113,8 +113,8 @@ end
 class Player
   AVAILABLE_MOVES = [Rock.new, Paper.new, Scissors.new, Lizard.new, Spock.new]
 
-  attr_accessor :move, :current_score
   attr_writer :name
+  attr_accessor :current_score, :move
 
   def initialize
     name
@@ -204,7 +204,7 @@ class Terminator < Computer
 end
 
 class Rule
-  attr_accessor :history
+  attr_reader :history
 
   def initialize(history_of_movements)
     @history = history_of_movements
@@ -277,7 +277,7 @@ class Aggressive < Rule
 end
 
 class RuleEngine
-  attr_accessor :all_rules
+  attr_reader :all_rules
 
   def initialize(history_of_movements)
     @all_rules = [Aggressive.new(history_of_movements),
@@ -295,7 +295,10 @@ class RuleEngine
 end
 
 class HistoryOfMovements
-  attr_accessor :human_moves, :computer_moves, :human_matches, :computer_matches
+  attr_reader :human_moves,
+              :computer_moves,
+              :human_matches,
+              :computer_matches
 
   def initialize
     @human_moves = []
@@ -343,11 +346,11 @@ class HistoryOfMovements
 end
 
 class RPSGame
-  attr_accessor :human,
-                :computer,
-                :max_score,
-                :history_of_movements,
-                :rule_engine
+  attr_accessor :max_score
+  attr_reader :human,
+              :computer,
+              :history_of_movements,
+              :rule_engine
 
   def initialize
     @human = Human.new
