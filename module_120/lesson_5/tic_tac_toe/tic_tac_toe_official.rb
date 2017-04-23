@@ -1,5 +1,3 @@
-require 'pry'
-
 class Board
   WINNING_LINES = [
                    [1, 2, 3], [4, 5, 6], [7, 8, 9],
@@ -28,7 +26,7 @@ class Board
   end
 
   def someone_won?
-    !!detect_winner
+    !!winning_marker
   end
 
   def count_human_marker(squares)
@@ -39,7 +37,7 @@ class Board
     squares.map(&:marker).count(TTTGame::COMPUTER_MARKER)
   end
   # returns winning marker or nil 
-  def detect_winner
+  def winning_marker
     WINNING_LINES.each do |line|
       if count_human_marker(@squares.values_at(*line)) == 3
         return TTTGame::HUMAN_MARKER
@@ -62,6 +60,21 @@ class Board
 
   def reset
     (1..9).each { |key| @squares[key] = Square.new }
+  end
+  
+  def draw
+    puts "     |     |"
+    puts "  #{get_square_at(1)}  |  #{get_square_at(2)}  |  #{get_square_at(3)}  "
+    puts "     |     |"
+    puts "_____|_____|_____"
+    puts "     |     |"
+    puts "  #{get_square_at(4)}  |  #{get_square_at(5)}  |  #{get_square_at(6)}  "
+    puts "     |     |"
+    puts "_____|_____|_____"
+    puts "     |     |"
+    puts "  #{get_square_at(7)}  |  #{get_square_at(8)}  |  #{get_square_at(9)}  "
+    puts "     |     |"
+    puts ""    
   end
 end
 
@@ -119,18 +132,7 @@ class TTTGame
   def display_board
     puts "You're #{human.marker}. Computer is #{computer.marker}"
     puts ""
-    puts "     |     |"
-    puts "  #{board.get_square_at(1)}  |  #{board.get_square_at(2)}  |  #{board.get_square_at(3)}  "
-    puts "     |     |"
-    puts "_____|_____|_____"
-    puts "     |     |"
-    puts "  #{board.get_square_at(4)}  |  #{board.get_square_at(5)}  |  #{board.get_square_at(6)}  "
-    puts "     |     |"
-    puts "_____|_____|_____"
-    puts "     |     |"
-    puts "  #{board.get_square_at(7)}  |  #{board.get_square_at(8)}  |  #{board.get_square_at(9)}  "
-    puts "     |     |"
-    puts ""
+    board.draw
   end
 
   def human_moves
@@ -151,7 +153,7 @@ class TTTGame
 
   def display_result
     display_board
-    case board.detect_winner
+    case board.winning_marker
     when TTTGame::HUMAN_MARKER    then puts "You won!"
     when TTTGame::COMPUTER_MARKER then puts "Computer won!"
     else puts "It's a tie!"
@@ -173,6 +175,16 @@ class TTTGame
     system 'clear'
   end
 
+  def reset
+    board.reset
+    clear_screen
+  end
+
+  def display_play_again_message
+    puts "Let's play again!"
+    puts ""
+  end
+
   def play
     clear_screen
     display_welcome_message
@@ -189,9 +201,8 @@ class TTTGame
       end
       display_result
       break unless play_again?
-      board.reset
-      clear_screen
-      puts "Let's play again!"
+      reset
+      display_play_again_message
     end
     display_goodbye_message
   end
