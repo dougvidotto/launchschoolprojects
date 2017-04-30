@@ -27,6 +27,28 @@ class Board
     !!winning_marker
   end
 
+  def human_about_to_win(squares, human_marker)
+    two_human_markers =
+      (squares.count { |square| square.marker == human_marker } == 2)
+
+    one_unmarked = (squares.count(&:unmarked?) == 1)
+
+    two_human_markers && one_unmarked
+  end
+
+  def one_to_win(human_marker)
+    squares_to_defend = []
+    WINNING_LINES.each do |line|
+      squares_at_winning_line = @squares.values_at(*line)
+      if human_about_to_win(squares_at_winning_line, human_marker)
+        squares_to_defend.push(
+          line.select { |key| @squares[key].unmarked? }.first
+        )
+      end
+    end
+    squares_to_defend
+  end
+
   # returns winning marker or nil
   def winning_marker
     WINNING_LINES.each do |line|
@@ -88,10 +110,11 @@ class Square
 end
 
 class Player
-  attr_reader :marker
+  attr_reader :marker, :name
   attr_accessor :score
 
-  def initialize(marker)
+  def initialize(name, marker)
+    @name = name
     @marker = marker
     @score = 0
   end
@@ -103,21 +126,21 @@ class Player
   def reset_score
     @score = 0
   end
+
+  def to_s
+    @name
+  end
 end
 
 class TTTGame
-  HUMAN_MARKER = 'X'
-  COMPUTER_MARKER = 'O'
-  FIRST_TO_MOVE = HUMAN_MARKER
+  CROSS_MARKER = 'X'
+  CIRCLE_MARKER = 'O'
   VICTORIES_TO_WIN = 5
 
   attr_reader :board, :human, :computer, :human_turn
 
   def initialize
     @board = Board.new
-    @human = Player.new(HUMAN_MARKER)
-    @computer = Player.new(COMPUTER_MARKER)
-    @current_marker = FIRST_TO_MOVE
   end
 
   private
@@ -137,7 +160,7 @@ class TTTGame
   end
 
   def display_board
-    puts "You are #{human.marker}. Computer is #{computer.marker}"
+    puts "#{human} are #{human.marker}. #{computer} is #{computer.marker}"
     show_current_score
     board.draw
   end
@@ -163,8 +186,31 @@ class TTTGame
     board[square] = human.marker
   end
 
+  def place_winning_or_lose_square(squares)
+    computer_winning_square = squares.sample
+    board[computer_winning_square] = computer.marker
+  end
+
+  def attack_or_defend
+    computer_winning_squares = board.one_to_win(computer.marker)
+    human_winning_squares = board.one_to_win(human.marker)
+    if !computer_winning_squares.empty?
+      place_winning_or_lose_square(computer_winning_squares)
+      return true
+    elsif !human_winning_squares.empty?
+      place_winning_or_lose_square(human_winning_squares)
+      return true
+    end
+    false
+  end
+
   def computer_moves
-    board[board.unmarked_keys.sample] = computer.marker
+    return if attack_or_defend
+    if board.unmarked_keys.include?(5)
+      board[5] = computer.marker
+    else
+      board[board.unmarked_keys.sample] = computer.marker
+    end
   end
 
   def plurality(score)
@@ -173,21 +219,22 @@ class TTTGame
 
   def show_current_score
     puts ""
-    puts "Human    has #{human.score} #{plurality(human.score)}"
-    puts "Computer has #{computer.score} #{plurality(computer.score)}"
+    puts "#{human} has #{human.score} #{plurality(human.score)}"
+    puts "#{computer} has #{computer.score} #{plurality(computer.score)}"
     puts ""
   end
 
   def display_result
     display_board
     case board.winning_marker
-    when TTTGame::HUMAN_MARKER
+    when human.marker
       puts "You won!"
       human.add_score
-    when TTTGame::COMPUTER_MARKER
+    when computer.marker
       puts "Computer won!"
       computer.add_score
-    else puts "It's a tie!"
+    else
+      puts "It's a tie!"
     end
     show_current_score
     puts "Press any key to continue"
@@ -212,10 +259,11 @@ class TTTGame
   def reset
     board.reset
     clear_screen
-    @current_marker = FIRST_TO_MOVE
+    @current_marker = human.marker
   end
 
   def display_play_again_message
+    clear_screen
     puts "Let's play again!"
     puts ""
   end
@@ -223,15 +271,15 @@ class TTTGame
   def current_player_moves
     if human_turn?
       human_moves
-      @current_marker = COMPUTER_MARKER
+      @current_marker = computer.marker
     else
       computer_moves
-      @current_marker = HUMAN_MARKER
+      @current_marker = human.marker
     end
   end
 
   def human_turn?
-    @current_marker == HUMAN_MARKER
+    @current_marker == human.marker
   end
 
   def total_victories_achieved?
@@ -265,14 +313,82 @@ class TTTGame
     end
   end
 
+  def ask_for_player_name
+    human_name = nil
+    loop do
+      puts "So, what's your name?"
+      human_name = gets.chomp
+      break if human_name.strip != ""
+      puts "Sorry, you have to choose a name"
+    end
+    human_name
+  end
+
+  def computer_name_is_random?
+    answer = nil
+    loop do
+      puts ""
+      puts "Would you like to give the computer a name?"
+      puts "1) I would like to set one"
+      puts "2) No, just choose a random one for me"
+      answer = gets.chomp.to_i
+      break if [1, 2].include?(answer)
+      puts "Sorry, you must insert 1 or 2."
+    end
+    return true if answer == 2
+    false
+  end
+
+  def ask_for_computer_name
+    computer_name = nil
+    if !computer_name_is_random?
+      loop do
+        puts "What is the computer name then?"
+        computer_name = gets.chomp
+        break if computer_name.strip != ""
+        puts "Sorry, you have to choose a name"
+      end
+    else
+      computer_name = ['Terminator', 'Mr Handy', 'David 8', 'Megazord'].sample
+    end
+    computer_name
+  end
+
+  def choose_cross_or_circle
+    human_marker = nil
+    loop do
+      puts "Please, choose a marker: X or O"
+      human_marker = gets.chomp
+      break if %w[x o].include?(human_marker.downcase)
+      puts "Sorry, invalid choice."
+    end
+    human_marker
+  end
+
+  def config_players
+    human_name = ask_for_player_name
+    computer_name = ask_for_computer_name
+    human_marker = choose_cross_or_circle
+    if human_marker == CROSS_MARKER.downcase
+      @human = Player.new(human_name, CROSS_MARKER)
+      @computer = Player.new(computer_name, CIRCLE_MARKER)
+      @current_marker = CROSS_MARKER
+    else
+      @human = Player.new(human_name, CIRCLE_MARKER)
+      @computer = Player.new(computer_name, CROSS_MARKER)
+      @current_marker = CIRCLE_MARKER
+    end
+    human.reset_score
+    computer.reset_score
+  end
+
   public
 
   def play
     clear_screen
     display_welcome_message
     loop do
-      human.reset_score
-      computer.reset_score
+      config_players
       play_round
       display_end_game_result
       break unless play_again?
