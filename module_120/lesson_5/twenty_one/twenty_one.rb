@@ -10,7 +10,7 @@ module Messages
   end
 
   def display_final_score_presentation
-    puts "Final Results:"
+    puts "----------------Final Results ----------------------"
     puts ""
   end
 
@@ -90,7 +90,6 @@ module Messages
 end
 
 class Participant
-  attr_accessor :cards
   attr_reader :score
 
   def initialize
@@ -111,7 +110,7 @@ class Participant
   private
 
   def update_score
-    normal_cards, aces = cards.partition do |card|
+    normal_cards, aces = @cards.partition do |card|
       card.value != 'ace'
     end
     @score = 0
@@ -119,23 +118,26 @@ class Participant
     sum_aces(aces)
   end
 
-
   def sum_normal_cards(normal_cards)
     normal_cards.each do |card|
-      card.value.to_i != 0 ? @score += card.value.to_i : @score += 10
+      @score += card.value.to_i != 0 ? card.value.to_i : 10
     end
   end
 
   def sum_aces(aces)
     total = 0
     1.upto(aces.size) do |_|
-      total + 11 > 21 ? total += 1 : total += 11
+      total += total + 11 > 21 ? 1 : 11
     end
-    score + total > 21 ? @score += aces.size : @score += total
+    @score += @score + total > 21 ? aces.size : total
   end
 
   def display_cards
-    cards.size == 2 ? "#{cards.first}  and #{cards[1]}" : "#{cards[0..-2].join(', ')} and #{cards.last} "
+    if @cards.size == 2
+      "#{@cards.first}  and #{@cards[1]}"
+    else
+      "#{@cards[0..-2].join(', ')} and #{@cards.last} "
+    end
   end
 end
 
@@ -150,7 +152,7 @@ class Player < Participant
   end
 
   def hit(card)
-    cards << card
+    @cards << card
     update_score
   end
 end
@@ -180,7 +182,7 @@ class Dealer < Participant
     if show_all_cards
       current_cards << display_cards
     else
-      current_cards << cards.first.to_s
+      current_cards << @cards.first.to_s
       current_cards << "  and unknown card"
     end
     puts current_cards
@@ -192,7 +194,7 @@ class Dealer < Participant
   end
 
   def hit
-    cards << deck.pick_top_card
+    @cards << deck.pick_top_card
     update_score
   end
 end
@@ -209,7 +211,8 @@ class Deck
     card_presentation_position = 0
     Card::CARD_VALUES.each do |card_value|
       Card::SUITS.each do |suit|
-        @cards << Card.new(card_value, suit, Card::PRESENTATIONS[card_presentation_position])
+        @cards << Card.new(card_value, suit,
+                           Card::PRESENTATIONS[card_presentation_position])
         card_presentation_position += 1
       end
     end
@@ -225,12 +228,13 @@ class Deck
 end
 
 class Card
-
   SUITS = ['SPADES', 'HEARTS', 'DIAMONDS', 'CLUBS']
-  CARD_VALUES = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'jack', 'queen', 'king', 'ace']
+  CARD_VALUES = ['2', '3', '4', '5', '6', '7',
+                 '8', '9', '10', 'jack', 'queen',
+                 'king', 'ace']
 
   PRESENTATIONS = ['🂢', '🂲', '🃂', '🃒',
-                   '🂣', '🂳', '🃃', '🃓', 
+                   '🂣', '🂳', '🃃', '🃓',
                    '🂤', '🂴', '🃄', '🃔',
                    '🂥', '🂵', '🃅', '🃕',
                    '🂦', '🂶', '🃆', '🃖',
@@ -252,7 +256,7 @@ class Card
   end
 
   def to_s
-    "#{@presentation}"
+    presentation.to_s
   end
 end
 
@@ -292,11 +296,15 @@ class Game
       display_deciding_message
       decision = gets.chomp.to_i
       break if decision == 2
-      decision == 1 ? player.hit(dealer.deal_card) : display_wrong_decision_message
+      if decision == 1
+        player.hit(dealer.deal_card)
+      else
+        display_wrong_decision_message
+      end
       display_title
     end
     clear_screen
-  end 
+  end
 
   def dealer_turn
     display_title
@@ -307,9 +315,11 @@ class Game
       dealer.hit
       dealer_hits_count += 1
     end
-    dealer_hits_count > 0 ?
-      display_dealer_hits(dealer_hits_count, dealer.achieved_stay_score?) :
+    if dealer_hits_count > 0
+      display_dealer_hits(dealer_hits_count, dealer.achieved_stay_score?)
+    else
       display_dealer_no_hits_and_stayed
+    end
   end
 
   def show_player_score
@@ -356,9 +366,7 @@ class Game
     display_title
     display_final_score_presentation
     show_scores
-    if !someone_busted?
-      evaluate_scores
-    end
+    evaluate_scores unless someone_busted?
   end
 
   def play_again?
@@ -374,7 +382,7 @@ class Game
 
   def play_match
     loop do
-      loop do        
+      loop do
         display_title
         dealer.shuffle_deck
         deal_initial_cards
