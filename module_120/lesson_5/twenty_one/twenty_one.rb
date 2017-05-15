@@ -1,16 +1,20 @@
 module Messages
-  def display_title
+  def display_title(player, dealer)
     clear_screen
     puts "----------------------------------------------------"
     puts "  This is the Twenty-One Game !!"
     puts "  Beat the dealer getting as close as you can of 21!"
+    puts "  The one who beat the other five times first is the winner!"
     puts "  Good Luck!"
+    puts ""
+    puts "  Victories: "
+    puts "  Player - #{player.victories}  Dealer - #{dealer.victories}"
     puts "----------------------------------------------------"
     puts ""
   end
 
   def display_final_score_presentation
-    puts "----------------Final Results ----------------------"
+    puts "*****************   This round results   *****************"
     puts ""
   end
 
@@ -23,65 +27,79 @@ module Messages
   def display_wrong_decision_message
     puts "Sorry, you must choose 1 or 2. Please, try again."
     puts ""
+    press_enter
   end
 
   def clear_screen
     system 'clear' || 'cls'
   end
 
-  def press_any_key
+  def press_enter
     puts "Press enter to continue..."
     gets
   end
 
   def display_dealer_busted
-    puts "Dealer busted! You win!"
+    puts "Dealer busted! You won this round!"
     puts ""
+    press_enter
   end
 
   def display_player_busted
-    puts "Sorry, you busted. Dealer wins."
+    puts "Sorry, you busted. Dealer won this round."
     puts ""
+    press_enter
   end
 
   def display_dealer_turn
     puts "You stayed. Now it's dealer turn!"
     puts ""
-    press_any_key
+    press_enter
   end
 
   def display_dealer_hits(number_of_hits, stayed)
     puts "Dealer hit #{number_of_hits} times #{stayed ? 'and stayed' : ''}"
     puts ""
-    press_any_key
+    press_enter
   end
 
   def display_dealer_no_hits_and_stayed
     puts "Dealer didn't do any hits and stayed"
-    press_any_key
+    puts ""
+    press_enter
   end
 
   def display_player_victory
-    puts "Congratulations! You got a greater score! You won!"
+    puts "You got a greater score! You won this round."
     puts ""
-    press_any_key
+    press_enter
   end
 
   def display_dealer_victory
-    puts "Sorry. Dealer has a greater score. Dealer won."
+    puts "Sorry. Dealer has a greater score. Dealer won this round."
     puts ""
-    press_any_key
+    press_enter
   end
 
   def display_tie
     puts "It's a tie"
-    press_any_key
+    press_enter
   end
 
   def display_plain_again_message
     puts "Would you like to play again?"
     puts "1) Yes"
     puts "2) No"
+  end
+
+  def display_player_won_match
+    puts "You got 5 victories! Congratulations! You beat dealer!"
+    puts ""
+  end
+
+  def display_dealer_won_match
+    puts "Dealer got 5 victories! Sorry, but dealer beat you."
+    puts ""
   end
 
   def display_good_bye_message
@@ -91,9 +109,11 @@ end
 
 class Participant
   attr_reader :score
+  attr_accessor :victories
 
   def initialize
     @score = 0
+    @victories = 0
   end
 
   def receive_initial_cards(initial_cards)
@@ -107,19 +127,35 @@ class Participant
     score > 21
   end
 
+  def display_participant_score
+    if instance_of?(Player)
+      show_current_cards
+      puts "Your score is: #{score}"
+    else
+      show_current_cards(true)
+      puts "Dealer score is: #{score}"
+    end
+    puts ""
+  end
+
+  def won?(other_player)
+    other_player.busted? ||
+      score > other_player.score && score <= 21
+  end
+
   private
 
   def update_score
-    normal_cards, aces = @cards.partition do |card|
+    regular_cards, aces = @cards.partition do |card|
       card.value != 'ace'
     end
     @score = 0
-    sum_normal_cards(normal_cards)
+    sum_normal_cards(regular_cards)
     sum_aces(aces)
   end
 
-  def sum_normal_cards(normal_cards)
-    normal_cards.each do |card|
+  def sum_normal_cards(regular_cards)
+    regular_cards.each do |card|
       @score += card.value.to_i != 0 ? card.value.to_i : 10
     end
   end
@@ -161,11 +197,11 @@ class Dealer < Participant
   attr_reader :deck
 
   def initialize
-    @deck = Deck.new
     super
   end
 
   def shuffle_deck
+    @deck = Deck.new
     deck.shuffle!
   end
 
@@ -271,7 +307,7 @@ class Game
   end
 
   def start_playing
-    display_title
+    display_title(player, dealer)
     play_match
     display_good_bye_message
   end
@@ -295,19 +331,19 @@ class Game
       break if player.busted?
       display_deciding_message
       decision = gets.chomp.to_i
-      break if decision == 2
+      display_wrong_decision_message unless [1, 2].include?(decision)
       if decision == 1
         player.hit(dealer.deal_card)
-      else
-        display_wrong_decision_message
+      elsif decision == 2
+        break
       end
-      display_title
+      display_title(player, dealer)
     end
     clear_screen
   end
 
   def dealer_turn
-    display_title
+    display_title(player, dealer)
     display_dealer_turn
     dealer_hits_count = 0
     loop do
@@ -322,51 +358,24 @@ class Game
     end
   end
 
-  def show_player_score
-    player.show_current_cards
-    puts "Your score is: #{player.score}"
-    puts ""
-  end
-
-  def show_dealer_score
-    dealer.show_current_cards(true)
-    puts "Dealer score is: #{dealer.score}"
-    puts ""
-  end
-
-  def someone_busted?
-    if player.busted?
-      display_player_busted
-      return true
-    end
-
-    if dealer.busted?
-      display_dealer_busted
-      return true
-    end
-    false
-  end
-
-  def show_scores
-    show_player_score
-    show_dealer_score
-  end
-
   def evaluate_scores
-    if player.score > dealer.score
-      display_player_victory
-    elsif player.score < dealer.score
-      display_dealer_victory
+    if player.won?(dealer)
+      player.victories += 1
+      dealer.busted? ? display_dealer_busted : display_player_victory
+    elsif dealer.won?(player)
+      dealer.victories += 1
+      player.busted? ? display_player_busted : display_dealer_victory
     else
       display_tie
     end
   end
 
   def display_result
-    display_title
+    display_title(player, dealer)
     display_final_score_presentation
-    show_scores
-    evaluate_scores unless someone_busted?
+    player.display_participant_score
+    dealer.display_participant_score
+    evaluate_scores
   end
 
   def play_again?
@@ -380,18 +389,35 @@ class Game
     answer == 1
   end
 
-  def play_match
+  def evaluate_end_of_match_result
+    display_title(player, dealer)
+    player.victories == 5 ? display_player_won_match : display_dealer_won_match
+  end
+
+  def someone_won?
+    player.victories == 5 || dealer.victories == 5
+  end
+  
+  def play_round
+    player.victories = 0
+    dealer.victories = 0
     loop do
-      loop do
-        display_title
-        dealer.shuffle_deck
-        deal_initial_cards
-        player_turn
-        break if player.busted?
+      display_title(player, dealer)
+      dealer.shuffle_deck
+      deal_initial_cards
+      player_turn
+      unless player.busted?
         dealer_turn
-        break
       end
       display_result
+      break if someone_won?
+    end
+  end
+
+  def play_match
+    loop do
+      play_round
+      evaluate_end_of_match_result
       break unless play_again?
     end
   end
