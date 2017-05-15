@@ -42,13 +42,11 @@ module Messages
   def display_dealer_busted
     puts "Dealer busted! You won this round!"
     puts ""
-    press_enter
   end
 
   def display_player_busted
     puts "Sorry, you busted. Dealer won this round."
     puts ""
-    press_enter
   end
 
   def display_dealer_turn
@@ -69,14 +67,22 @@ module Messages
     press_enter
   end
 
-  def display_player_victory
-    puts "You got a greater score! You won this round."
+  def display_player_victory(dealer_busted)
+    if dealer_busted
+      display_dealer_busted
+    else
+      puts "You got a greater score! You won this round."
+    end
     puts ""
     press_enter
   end
 
-  def display_dealer_victory
-    puts "Sorry. Dealer has a greater score. Dealer won this round."
+  def display_dealer_victory(player_busted)
+    if player_busted
+      display_player_busted
+    else
+      puts "Sorry. Dealer has a greater score. Dealer won this round."
+    end
     puts ""
     press_enter
   end
@@ -248,7 +254,7 @@ class Deck
     Card::CARD_VALUES.each do |card_value|
       Card::SUITS.each do |suit|
         @cards << Card.new(card_value, suit,
-                           Card::PRESENTATIONS[card_presentation_position])
+                           Card::CARD_FACES[card_presentation_position])
         card_presentation_position += 1
       end
     end
@@ -269,19 +275,19 @@ class Card
                  '8', '9', '10', 'jack', 'queen',
                  'king', 'ace']
 
-  PRESENTATIONS = ['🂢', '🂲', '🃂', '🃒',
-                   '🂣', '🂳', '🃃', '🃓',
-                   '🂤', '🂴', '🃄', '🃔',
-                   '🂥', '🂵', '🃅', '🃕',
-                   '🂦', '🂶', '🃆', '🃖',
-                   '🂧', '🂷', '🃇', '🃗',
-                   '🂨', '🂸', '🃈', '🃘',
-                   '🂩', '🂹', '🃉', '🃙',
-                   '🂪', '🂺', '🃊', '🃚',
-                   '🂫', '🂻', '🃋', '🃛',
-                   '🂭', '🂽', '🃍', '🃝',
-                   '🂮', '🂾', '🃎', '🃞',
-                   '🂡', '🂱', '🃁', '🃑']
+  CARD_FACES = ['🂢', '🂲', '🃂', '🃒',
+                '🂣', '🂳', '🃃', '🃓',
+                '🂤', '🂴', '🃄', '🃔',
+                '🂥', '🂵', '🃅', '🃕',
+                '🂦', '🂶', '🃆', '🃖',
+                '🂧', '🂷', '🃇', '🃗',
+                '🂨', '🂸', '🃈', '🃘',
+                '🂩', '🂹', '🃉', '🃙',
+                '🂪', '🂺', '🃊', '🃚',
+                '🂫', '🂻', '🃋', '🃛',
+                '🂭', '🂽', '🃍', '🃝',
+                '🂮', '🂾', '🃎', '🃞',
+                '🂡', '🂱', '🃁', '🃑']
 
   attr_reader :value, :presentation
 
@@ -324,22 +330,25 @@ class Game
     player.show_current_cards
   end
 
-  def player_turn
+  def ask_for_player_hit_or_stay_decision
     decision = 0
     loop do
+      display_title(player, dealer)
       show_players_cards
-      break if player.busted?
       display_deciding_message
       decision = gets.chomp.to_i
-      display_wrong_decision_message unless [1, 2].include?(decision)
-      if decision == 1
-        player.hit(dealer.deal_card)
-      elsif decision == 2
-        break
-      end
-      display_title(player, dealer)
+      break if [1, 2].include?(decision)
+      display_wrong_decision_message
     end
-    clear_screen
+    decision
+  end
+
+  def player_turn
+    loop do
+      decision = ask_for_player_hit_or_stay_decision
+      decision == 1 ? player.hit(dealer.deal_card) : break
+      break if player.busted?
+    end
   end
 
   def dealer_turn
@@ -361,10 +370,10 @@ class Game
   def evaluate_scores
     if player.won?(dealer)
       player.victories += 1
-      dealer.busted? ? display_dealer_busted : display_player_victory
+      display_player_victory(dealer.busted?)
     elsif dealer.won?(player)
       dealer.victories += 1
-      player.busted? ? display_player_busted : display_dealer_victory
+      display_dealer_victory(player.busted?)
     else
       display_tie
     end
@@ -397,18 +406,14 @@ class Game
   def someone_won?
     player.victories == 5 || dealer.victories == 5
   end
-  
+
   def play_round
-    player.victories = 0
-    dealer.victories = 0
     loop do
       display_title(player, dealer)
       dealer.shuffle_deck
       deal_initial_cards
       player_turn
-      unless player.busted?
-        dealer_turn
-      end
+      dealer_turn unless player.busted?
       display_result
       break if someone_won?
     end
@@ -416,6 +421,8 @@ class Game
 
   def play_match
     loop do
+      player.victories = 0
+      dealer.victories = 0
       play_round
       evaluate_end_of_match_result
       break unless play_again?
