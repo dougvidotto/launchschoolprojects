@@ -8,7 +8,7 @@ module Messages
     puts "  Good Luck!"
     puts ""
     puts "  Victories: "
-    puts "  Player - #{player.victories}  Dealer - #{dealer.victories}"
+    puts "  Player - #{player.victories} x #{dealer.victories} - Dealer"
     puts "----------------------------------------------------"
     puts ""
   end
@@ -20,14 +20,12 @@ module Messages
 
   def display_deciding_message
     puts "What would you like to do?"
-    puts "1) Hit"
-    puts "2) Stay"
+    puts "Hit(h) or Stay?(s)"
   end
 
-  def display_wrong_decision_message
-    puts "Sorry, you must choose 1 or 2. Please, try again."
+  def display_wrong_decision_message(options)
+    puts "Sorry, only '#{options.first}' or '#{options[1]}' can be chosen."
     puts ""
-    press_enter
   end
 
   def clear_screen
@@ -41,30 +39,25 @@ module Messages
 
   def display_dealer_busted
     puts "Dealer busted! You won this round!"
-    puts ""
   end
 
   def display_player_busted
     puts "Sorry, you busted. Dealer won this round."
-    puts ""
   end
 
   def display_dealer_turn
     puts "You stayed. Now it's dealer turn!"
     puts ""
-    press_enter
   end
 
   def display_dealer_hits(number_of_hits, stayed)
     puts "Dealer hit #{number_of_hits} times #{stayed ? 'and stayed' : ''}"
     puts ""
-    press_enter
   end
 
   def display_dealer_no_hits_and_stayed
     puts "Dealer didn't do any hits and stayed"
     puts ""
-    press_enter
   end
 
   def display_player_victory(dealer_busted)
@@ -93,9 +86,7 @@ module Messages
   end
 
   def display_plain_again_message
-    puts "Would you like to play again?"
-    puts "1) Yes"
-    puts "2) No"
+    puts "Would you like to play again? Yes(y), No(n)"
   end
 
   def display_player_won_match
@@ -136,12 +127,9 @@ class Participant
   def display_participant_score
     if instance_of?(Player)
       show_current_cards
-      puts "Your score is: #{score}"
     else
       show_current_cards(true)
-      puts "Dealer score is: #{score}"
     end
-    puts ""
   end
 
   def won?(other_player)
@@ -153,7 +141,7 @@ class Participant
 
   def update_score
     regular_cards, aces = @cards.partition do |card|
-      card.value != 'ace'
+      card.value != 'Ace'
     end
     @score = 0
     sum_normal_cards(regular_cards)
@@ -176,9 +164,9 @@ class Participant
 
   def display_cards
     if @cards.size == 2
-      "#{@cards.first}  and #{@cards[1]}"
+      "#{@cards.first} and #{@cards[1]}"
     else
-      "#{@cards[0..-2].join(', ')} and #{@cards.last} "
+      "#{@cards[0..-2].join(', ')} and #{@cards.last}"
     end
   end
 end
@@ -189,7 +177,7 @@ class Player < Participant
   end
 
   def show_current_cards
-    puts "You have #{display_cards}"
+    puts "You have #{display_cards} - Total: #{score}"
     puts ""
   end
 
@@ -223,9 +211,10 @@ class Dealer < Participant
     current_cards = "Dealer has "
     if show_all_cards
       current_cards << display_cards
+      current_cards << " - Total: #{score}"
     else
       current_cards << @cards.first.to_s
-      current_cards << "  and unknown card"
+      current_cards << " and unknown card"
     end
     puts current_cards
     puts ""
@@ -250,12 +239,9 @@ class Deck
 
   def build_deck
     @cards = []
-    card_presentation_position = 0
     Card::CARD_VALUES.each do |card_value|
       Card::SUITS.each do |suit|
-        @cards << Card.new(card_value, suit,
-                           Card::CARD_FACES[card_presentation_position])
-        card_presentation_position += 1
+        @cards << Card.new(card_value, suit)
       end
     end
   end
@@ -272,33 +258,18 @@ end
 class Card
   SUITS = ['SPADES', 'HEARTS', 'DIAMONDS', 'CLUBS']
   CARD_VALUES = ['2', '3', '4', '5', '6', '7',
-                 '8', '9', '10', 'jack', 'queen',
-                 'king', 'ace']
+                 '8', '9', '10', 'Jack', 'Queen',
+                 'King', 'Ace']
 
-  CARD_FACES = ['🂢', '🂲', '🃂', '🃒',
-                '🂣', '🂳', '🃃', '🃓',
-                '🂤', '🂴', '🃄', '🃔',
-                '🂥', '🂵', '🃅', '🃕',
-                '🂦', '🂶', '🃆', '🃖',
-                '🂧', '🂷', '🃇', '🃗',
-                '🂨', '🂸', '🃈', '🃘',
-                '🂩', '🂹', '🃉', '🃙',
-                '🂪', '🂺', '🃊', '🃚',
-                '🂫', '🂻', '🃋', '🃛',
-                '🂭', '🂽', '🃍', '🃝',
-                '🂮', '🂾', '🃎', '🃞',
-                '🂡', '🂱', '🃁', '🃑']
+  attr_reader :value
 
-  attr_reader :value, :presentation
-
-  def initialize(value, suit, presentation)
+  def initialize(value, suit)
     @value = value
     @suit = suit
-    @presentation = presentation
   end
 
   def to_s
-    presentation.to_s
+    value
   end
 end
 
@@ -331,14 +302,14 @@ class Game
   end
 
   def ask_for_player_hit_or_stay_decision
-    decision = 0
+    decision = 'h'
+    display_title(player, dealer)
+    show_players_cards
     loop do
-      display_title(player, dealer)
-      show_players_cards
       display_deciding_message
-      decision = gets.chomp.to_i
-      break if [1, 2].include?(decision)
-      display_wrong_decision_message
+      decision = gets.chomp
+      break if ['h', 's'].include?(decision.downcase)
+      display_wrong_decision_message(['h', 's'])
     end
     decision
   end
@@ -346,7 +317,7 @@ class Game
   def player_turn
     loop do
       decision = ask_for_player_hit_or_stay_decision
-      decision == 1 ? player.hit(dealer.deal_card) : break
+      decision == 'h' ? player.hit(dealer.deal_card) : break
       break if player.busted?
     end
   end
@@ -380,7 +351,6 @@ class Game
   end
 
   def display_result
-    display_title(player, dealer)
     display_final_score_presentation
     player.display_participant_score
     dealer.display_participant_score
@@ -391,11 +361,11 @@ class Game
     answer = 0
     loop do
       display_plain_again_message
-      answer = gets.chomp.to_i
-      break if [1, 2].include?(answer.to_i)
-      display_wrong_decision_message
+      answer = gets.chomp
+      break if ['y', 'n'].include?(answer.downcase)
+      display_wrong_decision_message(['y', 'n'])
     end
-    answer == 1
+    answer.downcase == 'y'
   end
 
   def evaluate_end_of_match_result
