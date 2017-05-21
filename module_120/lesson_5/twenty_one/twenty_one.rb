@@ -29,7 +29,8 @@ module Messages
   end
 
   def clear_screen
-    system 'clear' || 'cls'
+    system 'clear'
+    system 'cls'
   end
 
   def press_enter
@@ -105,23 +106,24 @@ module Messages
 end
 
 class Participant
-  attr_reader :score
   attr_accessor :victories
 
   def initialize
     @score = 0
+    @cards = []
     @victories = 0
   end
 
-  def receive_initial_cards(initial_cards)
-    @cards = []
-    @cards << initial_cards.first
-    @cards << initial_cards[1]
-    update_score
+  def discard_hand
+    @cards = [] unless @cards.empty?
+  end
+
+  def hit(card)
+    @cards << card
   end
 
   def busted?
-    score > 21
+    current_score > 21
   end
 
   def display_participant_score
@@ -132,14 +134,7 @@ class Participant
     end
   end
 
-  def won?(other_player)
-    other_player.busted? ||
-      score > other_player.score && score <= 21
-  end
-
-  private
-
-  def update_score
+  def current_score
     regular_cards, aces = @cards.partition do |card|
       card.value != 'Ace'
     end
@@ -147,6 +142,13 @@ class Participant
     sum_normal_cards(regular_cards)
     sum_aces(aces)
   end
+
+  def won?(other_player)
+    other_player.busted? ||
+      current_score > other_player.current_score && current_score <= 21
+  end
+
+  private
 
   def sum_normal_cards(regular_cards)
     regular_cards.each do |card|
@@ -177,41 +179,21 @@ class Player < Participant
   end
 
   def show_current_cards
-    puts "You have #{display_cards} - Total: #{score}"
+    puts "You have #{display_cards} - Total: #{current_score}"
     puts ""
-  end
-
-  def hit(card)
-    @cards << card
-    update_score
   end
 end
 
 class Dealer < Participant
-  attr_reader :deck
-
   def initialize
     super
-  end
-
-  def shuffle_deck
-    @deck = Deck.new
-    deck.shuffle!
-  end
-
-  def deal_initial_cards
-    [deck.pick_top_card, deck.pick_top_card]
-  end
-
-  def deal_card
-    deck.pick_top_card
   end
 
   def show_current_cards(show_all_cards)
     current_cards = "Dealer has "
     if show_all_cards
       current_cards << display_cards
-      current_cards << " - Total: #{score}"
+      current_cards << " - Total: #{current_score}"
     else
       current_cards << @cards.first.to_s
       current_cards << " and unknown card"
@@ -221,21 +203,12 @@ class Dealer < Participant
   end
 
   def achieved_stay_score?
-    score >= 17
-  end
-
-  def hit
-    @cards << deck.pick_top_card
-    update_score
+    current_score >= 17
   end
 end
 
 class Deck
   attr_accessor :cards
-
-  def initialize
-    build_deck
-  end
 
   def build_deck
     @cards = []
@@ -276,11 +249,12 @@ end
 class Game
   include Messages
 
-  attr_reader :player, :dealer
+  attr_reader :player, :dealer, :deck
 
   def initialize
     @dealer = Dealer.new
     @player = Player.new
+    @deck = Deck.new
   end
 
   def start_playing
@@ -292,8 +266,10 @@ class Game
   private
 
   def deal_initial_cards
-    player.receive_initial_cards(dealer.deal_initial_cards)
-    dealer.receive_initial_cards(dealer.deal_initial_cards)
+    player.discard_hand
+    dealer.discard_hand
+    2.times { |_| player.hit(deck.pick_top_card) }
+    2.times { |_| dealer.hit(deck.pick_top_card) }
   end
 
   def show_players_cards
@@ -302,7 +278,7 @@ class Game
   end
 
   def ask_for_player_hit_or_stay_decision
-    decision = 'h'
+    decision = nil
     display_title(player, dealer)
     show_players_cards
     loop do
@@ -317,22 +293,27 @@ class Game
   def player_turn
     loop do
       decision = ask_for_player_hit_or_stay_decision
-      decision == 'h' ? player.hit(dealer.deal_card) : break
+      decision.downcase == 'h' ? player.hit(deck.pick_top_card) : break
       break if player.busted?
     end
+  end
+
+  def make_dealer_hits
+    quantity_of_hits = 0
+    loop do
+      break if dealer.busted? || dealer.achieved_stay_score?
+      dealer.hit(deck.pick_top_card)
+      quantity_of_hits += 1
+    end
+    quantity_of_hits
   end
 
   def dealer_turn
     display_title(player, dealer)
     display_dealer_turn
-    dealer_hits_count = 0
-    loop do
-      break if dealer.busted? || dealer.achieved_stay_score?
-      dealer.hit
-      dealer_hits_count += 1
-    end
-    if dealer_hits_count > 0
-      display_dealer_hits(dealer_hits_count, dealer.achieved_stay_score?)
+    quantity_of_hits = make_dealer_hits
+    if quantity_of_hits > 0
+      display_dealer_hits(quantity_of_hits, dealer.achieved_stay_score?)
     else
       display_dealer_no_hits_and_stayed
     end
@@ -380,7 +361,8 @@ class Game
   def play_round
     loop do
       display_title(player, dealer)
-      dealer.shuffle_deck
+      deck.build_deck
+      deck.shuffle!
       deal_initial_cards
       player_turn
       dealer_turn unless player.busted?
