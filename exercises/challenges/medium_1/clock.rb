@@ -14,23 +14,24 @@ class Clock
   end
   
   def +(minutes)
-    @hours, @minutes = (@minutes + minutes).divmod(60).map.with_index do |time, idx|
-      idx.odd? ? time : @hours + time
-    end
-    @hours = @hours.divmod(24).first > 0 ? @hours.divmod(24).first - 1 : @hours
+    total_minutes = @hours * 60 + @minutes + minutes
+    calculate_time(total_minutes)
     Clock.new(@hours, @minutes)
   end
   
   def -(minutes)
-    @hours, @minutes = (@minutes - minutes).divmod(60).map.with_index do |time, idx|
-      idx.odd? ? time : @hours + time
-    end
-    @hours = @hours < 0 ? @hours.divmod(24).last: @hours
+    total_minutes = @hours * 60 + @minutes - minutes
+    calculate_time(total_minutes)
     Clock.new(@hours, @minutes)
   end
   
   def ==(other_clock)
     return false unless other_clock.is_a?(Clock)
     to_s == other_clock.to_s
+  end
+
+  def calculate_time(total_minutes)
+    @hours = (total_minutes / 60) % 24
+    @minutes = total_minutes % 60 
   end
 end
